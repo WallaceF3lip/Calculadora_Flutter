@@ -34,7 +34,8 @@ lib/
     └── button_widgets.dart       # Botão reutilizável do teclado
 .github/
 └── workflows/
-    └── dart.yml                  # Pipeline que gera o .ipa do iOS em um Mac da nuvem
+    ├── dart.yml                  # Pipeline que gera o .ipa do iOS em um Mac da nuvem
+    └── android-apk.yml           # Pipeline que gera o .apk do Android em um Linux da nuvem
 ```
 
 ### O que cada arquivo ensina
@@ -122,6 +123,45 @@ O `.ipa` gerado **não é assinado**, então o iPhone não instala direto. As op
 
 ---
 
+## Build para Android
+
+Diferente do iOS, o Android **pode ser compilado no Windows**. Só precisa do Android SDK (vem com o Android Studio) e do JDK 17.
+
+### No próprio computador
+
+```bash
+flutter build apk --release                 # APK único, funciona em qualquer celular
+flutter build apk --release --split-per-abi # um APK menor por arquitetura (arm64, armv7, x86_64)
+flutter build appbundle --release           # .aab, formato exigido pela Play Store
+```
+
+O arquivo sai em `build/app/outputs/flutter-apk/app-release.apk`.
+
+### Pelo GitHub Actions (`.github/workflows/android-apk.yml`)
+
+1. Liga uma máquina `ubuntu-latest`, que é mais barata e rápida que a de macOS.
+2. Instala o Java 17 e o Flutter (canal stable, com cache).
+3. Roda `flutter build apk --release` e renomeia a saída para `FlutterApkExport.apk`.
+4. Publica o APK de dois jeitos:
+   - como **artifact** na página da execução
+   - na aba **Releases**, na mesma tag `v1.0` do `.ipa`
+
+Para disparar: aba **Actions** → **Android-apk-build** → **Run workflow**.
+
+### Como instalar o .apk
+
+Passe o arquivo para o celular e abra. O Android pede para liberar a **instalação de fontes desconhecidas**.
+
+### Assinatura
+
+Hoje o build de release é assinado com a **chave de debug** (veja `android/app/build.gradle.kts`). Isso basta para instalar no celular, mas **não é aceito na Play Store**. Para publicar lá:
+
+1. Criar uma chave própria com `keytool` e trocar o `applicationId` (hoje é `com.example.calculadora`).
+2. Configurar `signingConfigs` com a chave no `build.gradle.kts`.
+3. No workflow, guardar a chave e as senhas em **GitHub Secrets** (a chave em Base64) e gerar um `.aab`.
+
+---
+
 ## Problemas conhecidos e próximos passos
 
 Pontos encontrados na análise do código, bons para praticar:
@@ -147,4 +187,5 @@ Pontos encontrados na análise do código, bons para praticar:
 - [Enhanced enums (Dart)](https://dart.dev/language/enums#declaring-enhanced-enums)
 - [Dot shorthands (Dart)](https://dart.dev/language/dot-shorthands)
 - [Build and release an iOS app (Flutter)](https://docs.flutter.dev/deployment/ios)
+- [Build and release an Android app (Flutter)](https://docs.flutter.dev/deployment/android)
 - [GitHub Actions](https://docs.github.com/actions)
